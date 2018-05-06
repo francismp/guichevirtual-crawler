@@ -1,16 +1,6 @@
 import scrapy
 import json
-
-class BusTerminal(scrapy.Item):
-    name = scrapy.Field()
-    fullName = scrapy.Field()
-    url = scrapy.Field()
-    description = scrapy.Field()
-    fullDescription = scrapy.Field()
-    address = scrapy.Field()
-    position = scrapy.Field()
-    routes = scrapy.Field()
-    
+from models.BusTerminal import BusTerminal
 
 class BusTerminalSpider(scrapy.Spider):
     name = 'BusTerminalSpider'
@@ -41,21 +31,6 @@ class BusTerminalSpider(scrapy.Spider):
         position = response.css('.u-container-content > .page-landing-localizacao-mapa > iframe::attr(src)').extract_first()
         routesContainer = response.css('section.u-hide-tablet.u-container.u-container-grey > div > div')
 
-        routes = []
-
-        if routesContainer:
-            for route in routesContainer:
-                routeObj = {}
-                routeObj['name'] = route.css('h3 strong ::text').extract_first()
-
-                routeObj['destinations'] = []
-
-                for destination in route.css('ul li a strong ::text').extract():
-                    routeObj['destinations'].append(destination)
-
-                routes.append(routeObj)
-
-
         busTerminal = BusTerminal()
 
         busTerminal['name'] = name
@@ -65,9 +40,34 @@ class BusTerminalSpider(scrapy.Spider):
         busTerminal['fullDescription'] = fullDescription
         busTerminal['address'] = address
         busTerminal['position'] = position
-        busTerminal['routes'] = routes
+        busTerminal['routes'] = self.__getDestinations(routesContainer)
+
         return busTerminal
         # print('============================ROSO===========================')
 
+    def __getDestinations(self, container):
+        routes = []
+
+        if container:
+            for route in container:
+                routeObj = {}
+                routeObj['name'] = route.css('h3 strong ::text').extract_first()
+
+                routeObj['destinations'] = []
+
+                for destination in route.css('ul li a strong ::text').extract():
+                    routeObj['destinations'].append(self.__breakName(destination)[0])
+
+                routes.append(routeObj)
+
+
+        return routes
+
     def __getLatLongOffMapURL(self, url):
         return url
+
+    def __getStateOffName(self, name):
+        return name
+
+    def __breakName(self, name):
+        return [name]
